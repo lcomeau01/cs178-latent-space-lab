@@ -4,8 +4,6 @@
 ### Lecture slides from Tuesday
 https://susiesyli.com/cs178-latent-space-lecture/#0
 
-If you have set up on Tuesday, you can jump to step 4! 
-
 ### Step 1: Pull repo
 ```git clone https://github.com/susiesyli/cs178-latent-space-lab.git```
 
