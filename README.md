@@ -13,7 +13,8 @@ The packages required to run this repo are specified in ```requirements.txt```. 
 ### Step 4: Run notebook
 You **do not** need to write any code for this part! Simply run the notebook ```stylegan2_lab_test.ipynb``` and ensure that it runs successfully, and you can see a photo of a face printed below the last cell. 
 
-### Done! :) 
+### To start server: 
+```uvicorn backend.app:app --reload --host 127.0.0.1 --port 8000```
 
 ### Lecture slides
 https://susiesyli.com/cs178-latent-space-lecture/#0
