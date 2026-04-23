@@ -1,4 +1,8 @@
-If you have set up on Tuesday, you can jump to step 4! 
+### Lab Demo 
+[![Lab demo preview](assets/lab-demo.gif)](assets/lab-demo.mov)
+
+### Lecture slides from Tuesday
+https://susiesyli.com/cs178-latent-space-lecture/#0
 
 ### Step 1: Pull repo
 ```git clone https://github.com/susiesyli/cs178-latent-space-lab.git```
@@ -24,6 +28,3 @@ Complete the TODOs in ```backend/model.py``` using the code you ran in the noteb
 Then access the front end interface: 
 
 ```http://127.0.0.1:8000```
-
-### Lecture slides from Tuesday
-https://susiesyli.com/cs178-latent-space-lecture/#0
