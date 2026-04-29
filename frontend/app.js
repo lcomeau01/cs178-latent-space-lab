@@ -4,8 +4,6 @@ const el = id => document.getElementById(id)
 
 let idA = null
 let idB = null
-const historyA = []
-const historyB = []
 
 async function postJSON(path, body) {
   const res = await fetch(API_BASE + path, {
@@ -21,27 +19,37 @@ async function postJSON(path, body) {
 }
 
 async function generate(target) {
-  setMsg('')
+//   setMsg('')
   // any change to A or B invalidates existing filmstrip
-  clearFilmstrip()
   try {
     const data = await postJSON('/generate', {})
     if (target === 'A') {
       idA = data.latent_id
       el('imgA').src = data.image
-      historyA.push({ id: idA, image: data.image })
-      // enable undo if we have previous entries
-      if (historyA.length > 1) el('undoA').disabled = false
+      el('imgA-eq1').src = data.image
+      el('imgA-eq2').src = data.image
+      el('imgA-eq3').src = data.image
     } else {
       idB = data.latent_id
       el('imgB').src = data.image
-      historyB.push({ id: idB, image: data.image })
-      if (historyB.length > 1) el('undoB').disabled = false
+      el('imgB-eq1').src = data.image
+      el('imgB-eq2').src = data.image
+      el('imgB-eq3').src = data.image
     }
-    updateButtons();
+
+    if (idA && idB) {
+        getFilmstrip()
+        setInterpMsg('')
+        triggerWeightedUpdate()
+
+        doOp('add')
+        doOp('subtract_ab')
+        doOp('subtract_ba')
+    }
+
     return data
   } catch (e) {
-    setMsg('Generation error: ' + e.message)
+    // setMsg('Generation error: ' + e.message)
     throw e
   }
 }
@@ -52,46 +60,45 @@ function clearFilmstrip(){
   container.innerHTML = ''
 }
 
-function setMsg(text){ el('msg').textContent = text }
+// function setMsg(text){ el('msg').textContent = text }
 function setInterpMsg(text){ el('interpMsg').textContent = text }
 function setFormula(text){ const f = el('formula'); if(f) f.textContent = text }
 
 async function doOp(op) {
-  setMsg('')
-  if (!idA || !idB) { setMsg('Generate both A and B first'); return }
+//   setMsg('')
+//   if (!idA || !idB) { setMsg('Generate both A and B first'); return }
   try {
     const payload = { id_a: idA, id_b: idB, operation: op }
     const data = await postJSON('/arithmetic', payload)
-    el('imgOut').src = data.image
-    if(op === 'add') setFormula('z_out = z_A + z_B')
-    if(op === 'subtract_ab') setFormula('z_out = z_A - z_B')
-    if(op === 'subtract_ba') setFormula('z_out = z_B - z_A')
+    if(op === 'add') el('imgAddAB').src = data.image
+    if(op === 'subtract_ab') el('imgSubAB').src = data.image
+    if(op === 'subtract_ba') el('imgSubBA').src = data.image
   } catch (e) {
-    setMsg('Operation error: ' + e.message)
+    // setMsg('Operation error: ' + e.message)
   }
 }
 
 // Interpolation UI
 function setWeightVal(v) { el('weightVal').textContent = Number(v).toFixed(2) }
 
-async function doInterp() {
-  setInterpMsg('')
-  if (!idA || !idB) { setInterpMsg('Generate both A and B first'); return }
-  // Show filmstrip preview of interpolations (default 7 steps)
-  try {
-    await getFilmstrip()
-    setInterpMsg('')
-  } catch (e) {
-    setInterpMsg('Interpolation error: ' + e.message)
-  }
-}
+// async function doInterp() {
+//   setInterpMsg('')
+//   if (!idA || !idB) { setInterpMsg('Generate both A and B first'); return }
+//   // Show filmstrip preview of interpolations (default 7 steps)
+//   try {
+//     await getFilmstrip()
+//     setInterpMsg('')
+//   } catch (e) {
+//     setInterpMsg('Interpolation error: ' + e.message)
+//   }
+// }
 
 // Filmstrip and continuous weight handling
 let interpTimeout = null
 async function getFilmstrip(){
   if (!idA || !idB) return
   try{
-    const res = await postJSON('/interpolate', { id_a: idA, id_b: idB, steps: 7 })
+    const res = await postJSON('/interpolate', { id_a: idA, id_b: idB, steps: 10 })
     if (res && res.images){
       renderFilmstrip(res.images, res.alphas)
     }
@@ -109,6 +116,7 @@ function renderFilmstrip(images, alphas){
     fig.className = 'interp-thumb'
     const img = document.createElement('img')
     img.src = src
+    img.id = `interp${i}`
     img.alt = `interp ${i}`
     img.dataset.alpha = alphas ? alphas[i] : ''
     img.dataset.index = String(i)
@@ -119,6 +127,12 @@ function renderFilmstrip(images, alphas){
       triggerWeightedUpdate()
       highlightSelectedAlpha(a)
     })
+    if (i === 0) {
+        img.addEventListener('click', () => generate('A'))
+    }
+    if (i === images.length - 1) {
+        img.addEventListener('click', () => generate('B'))
+    }
     const cap = document.createElement('figcaption')
     cap.textContent = alphas ? `${alphas[i].toFixed(2)}` : ''
     fig.appendChild(img)
@@ -161,48 +175,24 @@ function triggerWeightedUpdate(){
     }catch(e){
       setInterpMsg('Interpolation error: ' + e.message)
     }
-  }, 120)
+  }, 50)
 }
 
 function clearOut(){ el('imgOut').src = ''; setFormula('z_out = —') }
 
 function updateButtons() {
   const enabled = idA && idB
-  el('opAdd').disabled = !enabled
-  el('opSubAB').disabled = !enabled
-  el('opSubBA').disabled = !enabled
-  el('doInterp').disabled = !enabled
-  // undo buttons enabled when history length > 1
-  if (el('undoA')) el('undoA').disabled = historyA.length <= 1
-  if (el('undoB')) el('undoB').disabled = historyB.length <= 1
+//   el('opAdd').disabled = !enabled
+//   el('opSubAB').disabled = !enabled
+//   el('opSubBA').disabled = !enabled
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  el('genA').addEventListener('click', () => generate('A'))
-  el('genB').addEventListener('click', () => generate('B'))
-  el('undoA').addEventListener('click', ()=>{
-    if (historyA.length <= 1) return
-    // remove latest
-    historyA.pop()
-    const prev = historyA[historyA.length-1]
-    idA = prev.id
-    el('imgA').src = prev.image
-    updateButtons();
-  })
-  el('undoB').addEventListener('click', ()=>{
-    if (historyB.length <= 1) return
-    historyB.pop()
-    const prev = historyB[historyB.length-1]
-    idB = prev.id
-    el('imgB').src = prev.image
-    updateButtons();
-  })
-  el('opAdd').addEventListener('click', () => doOp('add'))
-  el('opSubAB').addEventListener('click', () => doOp('subtract_ab'))
-  el('opSubBA').addEventListener('click', () => doOp('subtract_ba'))
+//   el('opAdd').addEventListener('click', () => doOp('add'))
+//   el('opSubAB').addEventListener('click', () => doOp('subtract_ab'))
+//   el('opSubBA').addEventListener('click', () => doOp('subtract_ba'))
   el('weight').addEventListener('input', (ev)=> { setWeightVal(ev.target.value); triggerWeightedUpdate() })
-  el('doInterp').addEventListener('click', doInterp)
-  el('clearOut').addEventListener('click', clearOut)
+
   // initialize
   setWeightVal(el('weight').value)
   setFormula('z_out = —')
@@ -211,20 +201,19 @@ document.addEventListener('DOMContentLoaded', () => {
   (async ()=>{
     try{
       // temporarily hide errors
-      setMsg('Generating initial images...')
+    //   setMsg('Generating initial images...')
       // disable action buttons while loading
-      el('opAdd').disabled = true;
-      el('opSubAB').disabled = true;
-      el('opSubBA').disabled = true;
-      el('doInterp').disabled = true;
+    //   el('opAdd').disabled = true;
+    //   el('opSubAB').disabled = true;
+    //   el('opSubBA').disabled = true;
       await generate('A')
       await generate('B')
       // load fixed filmstrip of 7 frames and compute initial interpolated result
       await getFilmstrip();
       triggerWeightedUpdate();
-      setMsg('');
+    //   setMsg('');
     }catch(err){
-      setMsg('Initial generation failed: ' + (err.message || err));
+    //   setMsg('Initial generation failed: ' + (err.message || err));
     } finally{
       updateButtons();
     }
